@@ -134,7 +134,8 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def final_model(input_dim, units, kernel_size, conv_stride, conv_border_mode, output_dim = 29):
+def final_model(input_dim, units, filters, kernel_size, conv_stride, conv_border_mode, bidir_layers, 
+    output_dim = 29):
     """ Build a deep network for speech 
     """
     # Main acoustic input
@@ -146,13 +147,23 @@ def final_model(input_dim, units, kernel_size, conv_stride, conv_border_mode, ou
                      padding=conv_border_mode,
                      activation='relu',
                      name='conv1d')(input_data)
-    PREVIOUS_LAYER = ...
-    time_dense = TimeDistributed(Dense(output_dim))(PREVIOUS_LAYER)
+    # Bidirectional Layers - 
+    # Inspiration from paper: http://www.cs.toronto.edu/~hinton/absps/DRNN_speech.pdf
+    rnns = []
+    rnns.append(Bidirectional(GRU(units, activation='relu', dropout = .2, 
+            return_sequences=True, implementation=2), name='bidir_rnn-00')(conv_1d))
+    # Add more GRU layers if necessary
+    for k in range(1, bidir_layers):
+        rnns.append(Bidirectional(GRU(units, activation='relu', dropout = .2, 
+            return_sequences=True, implementation=2), name='bidir_rnn-0'+str(k))(rnns[-1]))
+
+    # Add TimeDistributed
+    time_dense = TimeDistributed(Dense(output_dim))(rnns[-1])
     # TODO: Add softmax activation layer
-    y_pred = Activation('softmax', name = 'softmax')
+    y_pred = Activation('softmax', name = 'softmax')(time_dense)
     # Specify the model
     model = Model(inputs=input_data, outputs=y_pred)
     # TODO: Specify model.output_length
-    model.output_length = lambda x: x
+    model.output_length = lambda x: cnn_output_length(x, kernel_size, conv_border_mode, conv_stride)
     print(model.summary())
     return model
