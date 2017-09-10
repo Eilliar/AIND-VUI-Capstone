@@ -134,12 +134,18 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def final_model(input_dim, units, output_dim = 29):
+def final_model(input_dim, units, kernel_size, conv_stride, conv_border_mode, output_dim = 29):
     """ Build a deep network for speech 
     """
     # Main acoustic input
     input_data = Input(name='the_input', shape=(None, input_dim))
     # TODO: Specify the layers in your network
+    # Add convolutional layer
+    conv_1d = Conv1D(filters, kernel_size, 
+                     strides=conv_stride, 
+                     padding=conv_border_mode,
+                     activation='relu',
+                     name='conv1d')(input_data)
     PREVIOUS_LAYER = ...
     time_dense = TimeDistributed(Dense(output_dim))(PREVIOUS_LAYER)
     # TODO: Add softmax activation layer
