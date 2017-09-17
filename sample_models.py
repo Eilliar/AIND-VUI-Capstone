@@ -134,7 +134,8 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def final_model(input_dim, units, filters, kernel_size, conv_stride, conv_border_mode, bidir_layers, output_dim = 29):
+def final_model(input_dim, units, filters, kernel_size, conv_stride, 
+    conv_border_mode, bidir_layers, dropout = .2, output_dim = 29):
     """ Build a deep network for speech 
     """
     # Main acoustic input
@@ -145,14 +146,18 @@ def final_model(input_dim, units, filters, kernel_size, conv_stride, conv_border
                      padding = conv_border_mode,
                      activation = 'relu',
                      name = 'conv1d-00')(input_data)
+    bn_cnn = BatchNormalization(name='bn_conv_1d')(conv_1d)
+    
+    # Add a recurrent layer
+    simp_rnn = SimpleRNN(units, activation='relu',
+        return_sequences=True, implementation=2, name='rnn')(bn_cnn)
+    bn_rnn = BatchNormalization(name='bn_simp_rnn')(simp_rnn)
     
     rnns = []
-    #rnns.append(LSTM(units, activation='relu', dropout = .1, recurrent_dropout = .1, return_sequences = True, name='lstm-00')(conv_1d))
-    #rnns.append(BatchNormalization(name = 'batch_norm-00')(rnns[-1]))
-    rnns.append(Bidirectional(GRU(units, activation='relu', dropout = .1, recurrent_dropout = .1, return_sequences = True, implementation = 2),
-name='bidir_rnn-00')(conv_1d))
+    rnns.append(Bidirectional(GRU(units, activation='relu', dropout = dropout, recurrent_dropout = dropout, return_sequences = True, implementation = 2),
+name='bidir_rnn-00')(bn_rnn))
     for k in range(1, bidir_layers):
-        rnns.append(Bidirectional(GRU(units, activation='relu', dropout = .1, recurrent_dropout = .1, return_sequences = True, implementation = 2), 
+        rnns.append(Bidirectional(GRU(units, activation='relu', dropout = dropout, recurrent_dropout = dropout, return_sequences = True, implementation = 2), 
 name='bidir_rnn-0'+str(k))(rnns[-1]))
     
     # Add TimeDistributed
